@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .config import DEFAULT_ENCODING_THRESHOLD, DEFAULT_ENCODING_WEIGHTS
+from .identity_goal_prior import compute_identity_goal_relevance
 from .types import EncodingDecision, EventRecord
 
 
@@ -10,6 +11,8 @@ def score_event_for_encoding(
     event: EventRecord,
     threshold: float = DEFAULT_ENCODING_THRESHOLD,
     weights: dict[str, float] | None = None,
+    identity_tags: list[str] | None = None,
+    goal_tags: list[str] | None = None,
 ) -> EncodingDecision:
     """Compute transparent encoding score for an event record."""
     weights = weights or DEFAULT_ENCODING_WEIGHTS
@@ -26,6 +29,12 @@ def score_event_for_encoding(
         "social_importance": factors.social_importance * weights["social_importance"],
         "decision_irreversibility": factors.decision_irreversibility * weights["decision_irreversibility"],
     }
+    prior = compute_identity_goal_relevance(
+        cues=event.cues,
+        identity_tags=identity_tags or [],
+        goal_tags=goal_tags or [],
+    )
+    weighted["identity_goal_prior"] = prior["combined"] * 0.08
     score = max(0.0, min(1.0, round(sum(weighted.values()), 6)))
     promoted = score >= threshold
     reason = (

@@ -65,6 +65,7 @@ def score_candidate(
     anchor: str,
     excerpt: str,
     created_at: str = "",
+    identity_prior_bonus: float = 0.0,
     weights: dict[str, float] | None = None,
 ) -> RecallMatch:
     w = weights or DEFAULT_RECALL_WEIGHTS
@@ -85,6 +86,7 @@ def score_candidate(
         + w["goal_relevance"] * goal_relevance
         + w["open_loop_activation"] * open_loop_activation
         + w["recency_bonus"] * recency_bonus
+        + identity_prior_bonus
     )
 
     return RecallMatch(
@@ -97,6 +99,7 @@ def score_candidate(
             "goal_relevance": round(goal_relevance, 4),
             "open_loop_activation": round(open_loop_activation, 4),
             "recency_bonus": round(recency_bonus, 4),
+            "identity_prior_bonus": round(identity_prior_bonus, 4),
         },
         anchor=anchor,
         excerpt=excerpt,

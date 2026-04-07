@@ -111,6 +111,8 @@ class IngestInput:
     emphasis: float = 0.0
     social_importance: float = 0.1
     decision_irreversibility: float = 0.0
+    identity_relevance: float = 0.0
+    goal_priority: float = 0.0
     source: str = "conversation"
 
 

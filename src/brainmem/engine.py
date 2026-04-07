@@ -17,9 +17,11 @@ from .competition_inhibition import (
 from .cue_extraction import cues_for_ingest
 from .encoding_gate import score_event_for_encoding
 from .markdown_io import read_markdown, write_markdown
-from .open_loops import (
-    create_open_loop,
-    match_open_loops,
+from .open_loops import create_open_loop, match_open_loops
+from .identity_goal_prior import (
+    ensure_identity_goal_files,
+    score_identity_goal_prior,
+    update_identity_and_goals_from_event,
 )
 from .recall_scoring import score_candidate
 from .reconsolidation import (
@@ -27,11 +29,7 @@ from .reconsolidation import (
     labilize_memory,
     queue_patch,
 )
-from .action_scripts import (
-    extract_script_signature,
-    rank_scripts_for_query,
-    upsert_script_from_event,
-)
+from .action_scripts import extract_script_signature, rank_scripts_for_query, upsert_script_from_event
 from .simulation_planner import (
     build_experience_graph,
     load_experience_graph,
@@ -153,6 +151,15 @@ class BrainMemEngine:
             self._update_indexes(target_path, metadata_payload)
             self._maybe_create_open_loop(target_path, metadata_payload, record.text)
             self._update_action_scripts(target_path, metadata_payload, record.text)
+            update_identity_and_goals_from_event(
+                identity_dir=self.config.identity_dir,
+                goals_dir=self.config.goals_dir,
+                event_id=event_id,
+                event_text=record.text,
+                cues=record.cues,
+                project=record.project,
+                source_anchor=anchor,
+            )
 
         return MemoryCandidate(
             memory_id=event_id,
@@ -209,6 +216,17 @@ class BrainMemEngine:
                 created_at=str(metadata.get("created_at", "")),
                 weights=self.config.recall_weights,
             )
+            prior_score, prior_detail = score_identity_goal_prior(
+                identity_dir=self.config.identity_dir,
+                goals_dir=self.config.goals_dir,
+                query_cues=request.cues,
+                candidate_cues=[str(c) for c in metadata.get("cues", [])],
+                project=request.project,
+            )
+            candidate.total_score = round(candidate.total_score + prior_score, 6)
+            candidate.score_breakdown["identity_goal_prior"] = round(prior_score, 6)
+            candidate.score_breakdown["identity_evidence_hits"] = round(prior_detail.get("identity_hits", 0.0), 6)
+            candidate.score_breakdown["goal_alignment_hits"] = round(prior_detail.get("goal_hits", 0.0), 6)
             graph_activation = graph_map.get(memory_id)
             if graph_activation:
                 candidate.total_score = round(candidate.total_score + (0.2 * graph_activation.activation_score), 6)
