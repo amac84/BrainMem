@@ -1,0 +1,17 @@
+{
+  "edges": [
+    {
+      "action": "review",
+      "count": 1,
+      "evidence": [
+        "2026-04-07.md#event_id=ev-ca6d9c1325"
+      ],
+      "from_state": "project:atlas|mode:planning|emotion:worried",
+      "successes": 1,
+      "to_state": "project:atlas|mode:planning|emotion:worried"
+    }
+  ],
+  "states": [
+    "project:atlas|mode:planning|emotion:worried"
+  ]
+}

@@ -86,6 +86,43 @@ def _build_parser() -> argparse.ArgumentParser:
         help="After consolidation, commit queued reconsolidation patches.",
     )
 
+    simulate = subparsers.add_parser(
+        "simulate",
+        help="Run planning simulation over experience transitions",
+    )
+    simulate.add_argument(
+        "--project",
+        default="general",
+        help="Project context for current state",
+    )
+    simulate.add_argument(
+        "--mode",
+        default="planning",
+        help="Current processing mode",
+    )
+    simulate.add_argument(
+        "--emotion",
+        default="neutral",
+        help="Current emotional state proxy",
+    )
+    simulate.add_argument(
+        "--goal-hint",
+        default="",
+        help="Optional goal text to bias proposed transitions",
+    )
+    simulate.add_argument(
+        "--depth",
+        type=int,
+        default=2,
+        help="Rollout depth (default: 2)",
+    )
+    simulate.add_argument(
+        "--top-k",
+        type=int,
+        default=3,
+        help="Maximum proposed plans (default: 3)",
+    )
+
     return parser
 
 
@@ -115,6 +152,7 @@ def _handle_ingest(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str
         source=args.source,
     )
     candidate = engine.ingest(request)
+    open_loop = _maybe_register_open_loop(args, engine, candidate.memory_id)
     return {
         "status": "ok",
         "operation": "ingest",
@@ -125,6 +163,7 @@ def _handle_ingest(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str
         "encoding_score": candidate.encoding_score,
         "score_breakdown": candidate.scores,
         "anchor": candidate.anchor,
+        "open_loop": open_loop,
     }
 
 
@@ -216,6 +255,23 @@ def _handle_consolidate(args: argparse.Namespace, engine: BrainMemEngine) -> dic
     }
 
 
+def _handle_simulate(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str, Any]:
+    current_state = f"project:{args.project.lower()}|mode:{args.mode.lower()}|emotion:{args.emotion.lower()}"
+    plans = engine.simulate(
+        current_state=current_state,
+        goal_hint=args.goal_hint,
+        depth=args.depth,
+        top_k=args.top_k,
+    )
+    return {
+        "status": "ok",
+        "operation": "simulate",
+        "current_state": current_state,
+        "goal_hint": args.goal_hint,
+        **plans,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -228,6 +284,8 @@ def main(argv: list[str] | None = None) -> int:
         payload = _handle_recall(args, engine)
     elif args.command == "consolidate":
         payload = _handle_consolidate(args, engine)
+    elif args.command == "simulate":
+        payload = _handle_simulate(args, engine)
     else:
         parser.error(f"Unsupported command: {args.command}")
         return 2

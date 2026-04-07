@@ -32,6 +32,12 @@ from .action_scripts import (
     rank_scripts_for_query,
     upsert_script_from_event,
 )
+from .simulation_planner import (
+    build_experience_graph,
+    load_experience_graph,
+    save_experience_graph,
+    simulate_plan,
+)
 from .state_inference import infer_state
 from .types import (
     EncodingFactors,
@@ -435,6 +441,33 @@ class BrainMemEngine:
             claim_graph_path=self.config.indexes_dir / "claim_graph.json",
         )
         return result
+
+    def simulate(
+        self,
+        *,
+        current_state: str,
+        goal_hint: str,
+        depth: int = 2,
+        top_k: int = 3,
+    ) -> dict[str, Any]:
+        graph_path = self.config.indexes_dir / "experience_graph.json"
+        graph = build_experience_graph(self.config.events_dir)
+        save_experience_graph(graph_path, graph)
+        graph = load_experience_graph(graph_path)
+        proposals = simulate_plan(
+            graph=graph,
+            current_state=current_state,
+            goal_hint=goal_hint,
+            depth=depth,
+            top_k=top_k,
+        )
+        return {
+            "current_state": current_state,
+            "goal_hint": goal_hint,
+            "proposal_count": len(proposals),
+            "proposals": proposals,
+            "graph_path": str(graph_path),
+        }
 
     def _read_json(self, path: Path, default: Any) -> Any:
         if not path.exists():
