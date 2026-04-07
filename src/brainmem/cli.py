@@ -61,6 +61,22 @@ def _build_parser() -> argparse.ArgumentParser:
     recall.add_argument("--emotion", default="neutral")
     recall.add_argument("--top-k", type=int, default=5)
 
+    consolidate = subparsers.add_parser(
+        "consolidate",
+        help="Run event segmentation and daily summary generation",
+    )
+    consolidate.add_argument(
+        "--date",
+        default="",
+        help="Date in YYYY-MM-DD format (defaults to today UTC).",
+    )
+    consolidate.add_argument(
+        "--boundary-threshold",
+        type=float,
+        default=0.45,
+        help="Boundary score threshold for splitting stream events.",
+    )
+
     return parser
 
 
@@ -152,6 +168,28 @@ def _handle_recall(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str
     }
 
 
+def _handle_consolidate(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str, Any]:
+    from datetime import datetime, timezone
+
+    from .consolidation_job import run_daily_consolidation
+
+    if args.date:
+        target_date = datetime.fromisoformat(args.date).date()
+    else:
+        target_date = datetime.now(timezone.utc).date()
+    result = run_daily_consolidation(
+        config=engine.config,
+        target_date=target_date,
+        boundary_threshold=args.boundary_threshold,
+    )
+    return {
+        "status": "ok",
+        "operation": "consolidate",
+        "date": target_date.isoformat(),
+        **result,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -162,6 +200,8 @@ def main(argv: list[str] | None = None) -> int:
         payload = _handle_ingest(args, engine)
     elif args.command == "recall":
         payload = _handle_recall(args, engine)
+    elif args.command == "consolidate":
+        payload = _handle_consolidate(args, engine)
     else:
         parser.error(f"Unsupported command: {args.command}")
         return 2

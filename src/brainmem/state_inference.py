@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .types import MemoryState
 
@@ -43,7 +43,7 @@ def infer_state(text: str, metadata: dict | None = None) -> MemoryState:
     """Compatibility wrapper used by older callers/tests."""
     metadata = metadata or {}
     return infer_state_from_metadata(
-        now=datetime.utcnow(),
+        now=datetime.now(timezone.utc),
         place=str(metadata.get("place", metadata.get("location", "unknown"))),
         tool=str(metadata.get("tool", metadata.get("device_context", "unknown"))),
         mode=str(metadata.get("mode", metadata.get("processing_mode", "unknown"))),
