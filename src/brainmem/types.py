@@ -151,3 +151,14 @@ class RecallMatch:
     cues: list[str]
     state: dict[str, str]
 
+
+@dataclass(slots=True)
+class OpenLoopMatch:
+    loop_id: str
+    path: Path
+    priority: float
+    tension: float
+    next_action: str
+    trigger_reason: str
+    anchor: str
+

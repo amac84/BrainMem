@@ -50,6 +50,10 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--social-importance", type=float, default=0.1)
     ingest.add_argument("--decision-irreversibility", type=float, default=0.0)
     ingest.add_argument("--source", default="conversation")
+    ingest.add_argument("--open-loop-intent", default="", help="Optional open loop intent to register")
+    ingest.add_argument("--open-loop-next-action", default="", help="Optional open loop next action")
+    ingest.add_argument("--open-loop-trigger", default="", help="Optional open loop trigger cue")
+    ingest.add_argument("--open-loop-tension", type=float, default=0.0, help="Optional open loop tension score")
 
     recall = subparsers.add_parser("recall", help="Recall memories via cue/state scoring")
     recall.add_argument("--cues", default="", help="Comma-separated cue tokens.")
@@ -122,6 +126,19 @@ def _handle_ingest(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str
         "score_breakdown": candidate.scores,
         "anchor": candidate.anchor,
     }
+
+
+def _maybe_register_open_loop(args: argparse.Namespace, engine: BrainMemEngine, candidate_memory_id: str) -> dict[str, Any] | None:
+    if not args.open_loop_intent:
+        return None
+    result = engine.register_open_loop(
+        intent=args.open_loop_intent,
+        next_action=args.open_loop_next_action or "Clarify next action",
+        trigger=args.open_loop_trigger or "token:followup",
+        tension=args.open_loop_tension,
+        created_from_memory_id=candidate_memory_id,
+    )
+    return result
 
 
 def _handle_recall(args: argparse.Namespace, engine: BrainMemEngine) -> dict[str, Any]:

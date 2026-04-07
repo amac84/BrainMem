@@ -17,11 +17,20 @@ from .competition_inhibition import (
 from .cue_extraction import cues_for_ingest
 from .encoding_gate import score_event_for_encoding
 from .markdown_io import read_markdown, write_markdown
+from .open_loops import (
+    create_open_loop,
+    match_open_loops,
+)
 from .recall_scoring import score_candidate
 from .reconsolidation import (
     commit_reconsolidation_queue,
     labilize_memory,
     queue_patch,
+)
+from .action_scripts import (
+    extract_script_signature,
+    rank_scripts_for_query,
+    upsert_script_from_event,
 )
 from .state_inference import infer_state
 from .types import (
@@ -136,6 +145,8 @@ class BrainMemEngine:
             }
             write_markdown(target_path, metadata_payload, record.text)
             self._update_indexes(target_path, metadata_payload)
+            self._maybe_create_open_loop(target_path, metadata_payload, record.text)
+            self._update_action_scripts(target_path, metadata_payload, record.text)
 
         return MemoryCandidate(
             memory_id=event_id,
@@ -151,6 +162,23 @@ class BrainMemEngine:
         )
 
     def recall(self, request: RecallRequest) -> list[RecallMatch]:
+        open_loop_hits = match_open_loops(
+            open_loops_dir=self.config.open_loops_dir,
+            query_cues=request.cues,
+            project=request.project,
+            top_k=3,
+        )
+        query_signature = extract_script_signature(
+            text=request.query_text if hasattr(request, "query_text") else " ".join(request.cues),
+            action=(request.cues[0].replace("action:", "") if request.cues and request.cues[0].startswith("action:") else "review"),
+            tool=request.tool,
+            project=request.project,
+        )
+        action_script_hits = rank_scripts_for_query(
+            query_signature=query_signature,
+            scripts_dir=self.config.scripts_dir,
+            top_k=2,
+        )
         matches: list[RecallMatch] = []
         adjacency = self._load_hig_adjacency()
         graph_results = apply_pattern_separation(
@@ -194,6 +222,8 @@ class BrainMemEngine:
         selected = matches[: request.top_k]
         self._update_competition_inhibition(request, selected)
         self._mark_recalled_memories_labilized(selected, request)
+        self._apply_open_loop_boost(selected, open_loop_hits)
+        self._apply_action_script_boost(selected, action_script_hits)
         return selected
 
     def _stream_file_path(self, day: date) -> Path:
@@ -337,6 +367,67 @@ class BrainMemEngine:
                 confidence_delta=0.02,
                 expected_project=request.project.lower(),
             )
+
+    def _maybe_create_open_loop(self, event_path: Path, metadata_payload: dict[str, Any], text: str) -> None:
+        cues = [str(c) for c in metadata_payload.get("cues", [])]
+        if not any(
+            cue in {"token:need", "token:pending", "token:todo", "token:follow-up", "token:followup"}
+            for cue in cues
+        ):
+            return
+        trigger_cues = [
+            cue
+            for cue in cues
+            if cue.startswith(("project:", "person:", "action:", "tool:", "place:", "emotion:", "token:"))
+        ][:8]
+        loop_path = create_open_loop(
+            open_loops_dir=self.config.open_loops_dir,
+            intent=f"Resolve unresolved task from {metadata_payload.get('event_id')}",
+            trigger_cues=trigger_cues,
+            next_action=f"Review and close: {text[:120]}",
+            closure_condition="Explicit completion or user cancellation",
+            tension=0.65,
+        )
+        cues.append("status:open_loop")
+        metadata_payload["cues"] = sorted(set(cues))
+        write_markdown(event_path, metadata_payload, text)
+        refreshed_meta, refreshed_body = read_markdown(event_path)
+        refreshed_meta["open_loop_path"] = str(loop_path)
+        write_markdown(event_path, refreshed_meta, refreshed_body)
+        self._update_associative_indexes()
+
+    def _apply_open_loop_boost(self, selected: list[RecallMatch], open_loop_hits: list[dict[str, Any]]) -> None:
+        if not selected or not open_loop_hits:
+            return
+        max_tension = max(float(loop.get("tension", 0.0)) for loop in open_loop_hits)
+        for match in selected:
+            cues = set(match.cues)
+            if any(cue in cues for loop in open_loop_hits for cue in loop.get("trigger_cues", [])):
+                match.total_score = round(match.total_score + 0.1, 6)
+                match.score_breakdown["open_loop_triggered"] = 1.0
+                match.score_breakdown["open_loop_tension"] = round(max_tension, 6)
+        selected.sort(key=lambda item: item.total_score, reverse=True)
+
+    def _update_action_scripts(self, event_path: Path, metadata_payload: dict[str, Any], text: str) -> None:
+        event_id = str(metadata_payload.get("event_id", event_path.stem))
+        upsert_script_from_event(
+            scripts_dir=self.config.scripts_dir,
+            event_id=event_id,
+            event_text=text,
+            action=str(metadata_payload.get("action", "note")),
+            tool=str(metadata_payload.get("tool", "unknown")),
+            mode=str(metadata_payload.get("mode", "unknown")),
+            evidence_anchor=str(metadata_payload.get("source_anchor", "")),
+        )
+
+    def _apply_action_script_boost(self, selected: list[RecallMatch], script_hits: list[dict[str, Any]]) -> None:
+        if not selected or not script_hits:
+            return
+        script_bonus = max(float(hit.get("score", 0.0)) for hit in script_hits)
+        for match in selected:
+            match.total_score = round(match.total_score + (0.05 * script_bonus), 6)
+            match.score_breakdown["action_script_bonus"] = round(script_bonus, 6)
+        selected.sort(key=lambda item: item.total_score, reverse=True)
 
     def run_reconsolidation_commit(self) -> dict[str, Any]:
         result = commit_reconsolidation_queue(
