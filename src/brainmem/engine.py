@@ -36,6 +36,7 @@ from .simulation_planner import (
     save_experience_graph,
     simulate_plan,
 )
+from .schema_extraction import extract_weekly_schema
 from .state_inference import infer_state
 from .types import (
     EncodingFactors,
@@ -461,55 +462,12 @@ class BrainMemEngine:
         return result
 
     def run_weekly_schema_consolidation(self, week_id: str) -> dict[str, Any]:
-        """Generate a lightweight weekly theme/schema rollup."""
-        summary_dir = self.config.summaries_daily_dir
-        daily_files = sorted(summary_dir.glob("*.md"))
-        if not daily_files:
-            return {
-                "week_id": week_id,
-                "daily_count": 0,
-                "themes": [],
-                "schema_path": "",
-            }
-
-        themes: dict[str, int] = {}
-        anchors: list[str] = []
-        for daily_path in daily_files:
-            metadata, body = read_markdown(daily_path)
-            if metadata.get("type") != "daily_summary":
-                continue
-            text = body.lower()
-            if "atlas" in text:
-                themes["atlas"] = themes.get("atlas", 0) + 1
-            if "vendor" in text:
-                themes["vendor"] = themes.get("vendor", 0) + 1
-            if "budget" in text:
-                themes["budget"] = themes.get("budget", 0) + 1
-            for anchor in metadata.get("anchors", []):
-                if isinstance(anchor, str):
-                    anchors.append(anchor)
-
-        schema_path = self.config.schemas_dir / f"{week_id}.md"
-        top_themes = sorted(themes.items(), key=lambda item: item[1], reverse=True)[:8]
-        metadata = {
-            "type": "weekly_schema",
-            "week_id": week_id,
-            "source_daily_count": len(daily_files),
-            "themes": {k: v for k, v in top_themes},
-            "anchors": anchors[:20],
-        }
-        body_lines = ["## Weekly Themes"]
-        body_lines.extend(f"- {name}: observed {count} day(s)" for name, count in top_themes)
-        body_lines.append("")
-        body_lines.append("## Anchors")
-        body_lines.extend(f"- {anchor}" for anchor in anchors[:20])
-        write_markdown(schema_path, metadata, "\n".join(body_lines).strip() + "\n")
-        return {
-            "week_id": week_id,
-            "daily_count": len(daily_files),
-            "themes": top_themes,
-            "schema_path": str(schema_path),
-        }
+        return extract_weekly_schema(
+            week_id=week_id,
+            summaries_daily_dir=self.config.summaries_daily_dir,
+            events_dir=self.config.events_dir,
+            schemas_dir=self.config.schemas_dir,
+        )
 
     def refresh_identity_goal_priors(self) -> dict[str, Any]:
         """Derive simple identity/goal priors from evidence in memory."""
