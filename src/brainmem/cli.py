@@ -85,6 +85,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After consolidation, commit queued reconsolidation patches.",
     )
+    consolidate.add_argument(
+        "--skip-forgetting",
+        action="store_true",
+        help="Skip forgetting/archival pass during consolidation.",
+    )
 
     simulate = subparsers.add_parser(
         "simulate",
@@ -242,6 +247,7 @@ def _handle_consolidate(args: argparse.Namespace, engine: BrainMemEngine) -> dic
         config=engine.config,
         target_date=target_date,
         boundary_threshold=args.boundary_threshold,
+        run_forgetting=not args.skip_forgetting,
     )
     recon = {"decisions": [], "committed": 0, "conflicts": 0, "deferred": 0, "rejected": 0}
     if args.apply_reconsolidation:

@@ -7,8 +7,10 @@ claim: Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token
 evidence_anchor: 2026-04-07.md#event_id=ev-2229abd465
 confidence_delta: 0.02
 expected_project: atlas
-status: queued
+status: committed
 created_at: 2026-04-07T10:44:11+00:00
+status_reason: applied
+updated_at: 2026-04-07T10:53:24+00:00
 ---
 
 Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:budget,token:vendor;people=Maya;project=Atlas; excerpt=Need to call Maya to close the Atlas vendor handoff loop tomorrow

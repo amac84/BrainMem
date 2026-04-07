@@ -442,6 +442,114 @@ class BrainMemEngine:
         )
         return result
 
+    def run_weekly_schema_consolidation(self, week_id: str) -> dict[str, Any]:
+        """Generate a lightweight weekly theme/schema rollup."""
+        summary_dir = self.config.summaries_daily_dir
+        daily_files = sorted(summary_dir.glob("*.md"))
+        if not daily_files:
+            return {
+                "week_id": week_id,
+                "daily_count": 0,
+                "themes": [],
+                "schema_path": "",
+            }
+
+        themes: dict[str, int] = {}
+        anchors: list[str] = []
+        for daily_path in daily_files:
+            metadata, body = read_markdown(daily_path)
+            if metadata.get("type") != "daily_summary":
+                continue
+            text = body.lower()
+            if "atlas" in text:
+                themes["atlas"] = themes.get("atlas", 0) + 1
+            if "vendor" in text:
+                themes["vendor"] = themes.get("vendor", 0) + 1
+            if "budget" in text:
+                themes["budget"] = themes.get("budget", 0) + 1
+            for anchor in metadata.get("anchors", []):
+                if isinstance(anchor, str):
+                    anchors.append(anchor)
+
+        schema_path = self.config.schemas_dir / f"{week_id}.md"
+        top_themes = sorted(themes.items(), key=lambda item: item[1], reverse=True)[:8]
+        metadata = {
+            "type": "weekly_schema",
+            "week_id": week_id,
+            "source_daily_count": len(daily_files),
+            "themes": {k: v for k, v in top_themes},
+            "anchors": anchors[:20],
+        }
+        body_lines = ["## Weekly Themes"]
+        body_lines.extend(f"- {name}: observed {count} day(s)" for name, count in top_themes)
+        body_lines.append("")
+        body_lines.append("## Anchors")
+        body_lines.extend(f"- {anchor}" for anchor in anchors[:20])
+        write_markdown(schema_path, metadata, "\n".join(body_lines).strip() + "\n")
+        return {
+            "week_id": week_id,
+            "daily_count": len(daily_files),
+            "themes": top_themes,
+            "schema_path": str(schema_path),
+        }
+
+    def refresh_identity_goal_priors(self) -> dict[str, Any]:
+        """Derive simple identity/goal priors from evidence in memory."""
+        events = sorted(self.config.events_dir.glob("**/*.md"))
+        role_counts: dict[str, int] = {}
+        goal_counts: dict[str, int] = {}
+        evidence: list[str] = []
+        for path in events:
+            metadata, body = read_markdown(path)
+            if metadata.get("type") != "event":
+                continue
+            project = str(metadata.get("project", "general")).lower()
+            action = str(metadata.get("action", "note")).lower()
+            if project and project != "general":
+                goal_counts[project] = goal_counts.get(project, 0) + 1
+            if action in {"plan", "review", "call", "debug", "write"}:
+                role = f"role:{action}_oriented"
+                role_counts[role] = role_counts.get(role, 0) + 1
+            anchor = str(metadata.get("source_anchor", ""))
+            if anchor:
+                evidence.append(anchor)
+
+        identity_path = self.config.identity_dir / "identity.md"
+        goals_path = self.config.goals_dir / "active_goals.md"
+        identity_meta = {
+            "type": "identity_profile",
+            "roles": role_counts,
+            "evidence_count": len(evidence),
+        }
+        identity_body = "## Inferred Roles\n" + "\n".join(
+            f"- {role} ({count})" for role, count in sorted(role_counts.items(), key=lambda x: x[1], reverse=True)
+        )
+        if not role_counts:
+            identity_body += "\n- none yet"
+        identity_body += "\n\n## Evidence Anchors\n" + "\n".join(f"- {a}" for a in evidence[:20])
+        write_markdown(identity_path, identity_meta, identity_body.strip() + "\n")
+
+        goals_meta = {
+            "type": "goal_prior",
+            "goals": goal_counts,
+            "evidence_count": len(evidence),
+        }
+        goals_body = "## Active Goal Priors\n" + "\n".join(
+            f"- {goal}: {count}" for goal, count in sorted(goal_counts.items(), key=lambda x: x[1], reverse=True)
+        )
+        if not goal_counts:
+            goals_body += "\n- none yet"
+        goals_body += "\n\n## Evidence Anchors\n" + "\n".join(f"- {a}" for a in evidence[:20])
+        write_markdown(goals_path, goals_meta, goals_body.strip() + "\n")
+
+        return {
+            "identity_path": str(identity_path),
+            "goals_path": str(goals_path),
+            "roles": role_counts,
+            "goals": goal_counts,
+            "evidence_count": len(evidence),
+        }
+
     def simulate(
         self,
         *,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -32,13 +33,16 @@ class ConsolidationJob:
         segments = segment_stream_records(records, boundary_threshold=boundary_threshold)
         materialized = _materialize_events(self.config, day, segments)
         summary_path, gist_lines, anchors = _write_daily_summary(self.config, day, materialized)
+        weekly_summary_path, weekly_themes = _write_weekly_summary(self.config, day)
         return {
             "stream_path": str(stream_path),
             "events_considered": len(records),
             "segments": len(segments),
             "summary_path": str(summary_path),
+            "weekly_summary_path": str(weekly_summary_path),
             "gist_lines": gist_lines,
             "anchors": anchors,
+            "weekly_themes": weekly_themes,
         }
 
 
@@ -195,3 +199,69 @@ def _build_segment_notes(events: list[dict[str, Any]]) -> list[str]:
         action = sample["metadata"].get("action", "note")
         notes.append(f"Segment {seg_id}: project={project}, action_mode={action}, events={len(by_segment[seg_id])}.")
     return notes
+
+
+def _write_weekly_summary(
+    config: BrainMemConfig,
+    day: date,
+) -> tuple[Path, list[str]]:
+    iso_year, iso_week, _ = day.isocalendar()
+    week_key = f"{iso_year}-W{iso_week:02d}"
+    summary_path = config.summaries_weekly_dir / f"{week_key}.md"
+
+    daily_paths = sorted(config.summaries_daily_dir.glob("*.md"))
+    focus_counter: Counter[str] = Counter()
+    emotion_counter: Counter[str] = Counter()
+    anchors: list[str] = []
+    included_days: list[str] = []
+
+    for daily_path in daily_paths:
+        try:
+            daily_date = date.fromisoformat(daily_path.stem)
+        except ValueError:
+            continue
+        d_year, d_week, _ = daily_date.isocalendar()
+        if (d_year, d_week) != (iso_year, iso_week):
+            continue
+
+        meta, body = read_markdown(daily_path)
+        included_days.append(daily_date.isoformat())
+        for line in body.splitlines():
+            line = line.strip()
+            if line.startswith("- Primary focus was "):
+                focus = line.replace("- Primary focus was ", "").split(" across ", 1)[0].strip()
+                if focus:
+                    focus_counter[focus] += 1
+            elif line.startswith("- Dominant emotional tone was "):
+                emotion = line.replace("- Dominant emotional tone was ", "").rstrip(".").strip()
+                if emotion:
+                    emotion_counter[emotion] += 1
+        anchors.extend([str(a) for a in meta.get("anchors", []) if str(a)])
+
+    top_focus = [item for item, _ in focus_counter.most_common(3)]
+    top_emotions = [item for item, _ in emotion_counter.most_common(3)]
+    theme_lines: list[str] = []
+    if top_focus:
+        theme_lines.append(f"Recurring focus: {', '.join(top_focus)}.")
+    if top_emotions:
+        theme_lines.append(f"Recurring emotional tones: {', '.join(top_emotions)}.")
+    if not theme_lines:
+        theme_lines.append("No recurring themes yet.")
+
+    body_lines = ["## Top themes"]
+    body_lines.extend(f"- {line}" for line in theme_lines)
+    body_lines.append("")
+    body_lines.append("## Daily anchors")
+    body_lines.extend(f"- {anchor}" for anchor in sorted(set(anchors))[:20])
+    body = "\n".join(body_lines).strip() + "\n"
+
+    metadata = {
+        "type": "weekly_summary",
+        "week": week_key,
+        "included_days": included_days,
+        "daily_count": len(included_days),
+        "theme_count": len(theme_lines),
+        "anchors": sorted(set(anchors))[:20],
+    }
+    write_markdown(summary_path, metadata, body)
+    return summary_path, theme_lines
