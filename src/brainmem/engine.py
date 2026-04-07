@@ -20,6 +20,7 @@ from .markdown_io import read_markdown, write_markdown
 from .open_loops import create_open_loop, match_open_loops
 from .identity_goal_prior import (
     ensure_identity_goal_files,
+    load_goal_tags,
     score_identity_goal_prior,
     update_identity_and_goals_from_event,
 )
@@ -538,16 +539,19 @@ class BrainMemEngine:
         graph = build_experience_graph(self.config.events_dir)
         save_experience_graph(graph_path, graph)
         graph = load_experience_graph(graph_path)
+        goal_priors = load_goal_tags(self.config.goals_dir)
         proposals = simulate_plan(
             graph=graph,
             current_state=current_state,
             goal_hint=goal_hint,
             depth=depth,
             top_k=top_k,
+            goal_priors=goal_priors,
         )
         return {
             "current_state": current_state,
             "goal_hint": goal_hint,
+            "goal_priors_used": goal_priors,
             "proposal_count": len(proposals),
             "proposals": proposals,
             "graph_path": str(graph_path),

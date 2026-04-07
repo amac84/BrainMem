@@ -269,11 +269,17 @@ def _handle_simulate(args: argparse.Namespace, engine: BrainMemEngine) -> dict[s
         depth=args.depth,
         top_k=args.top_k,
     )
+    utility_risk = engine.evaluate_action_utility_risk(
+        state=current_state,
+        goal_hint=args.goal_hint,
+        top_k=args.top_k,
+    )
     return {
         "status": "ok",
         "operation": "simulate",
         "current_state": current_state,
         "goal_hint": args.goal_hint,
+        "utility_risk": utility_risk,
         **plans,
     }
 
