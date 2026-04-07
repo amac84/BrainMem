@@ -38,7 +38,7 @@ from .simulation_planner import (
     simulate_plan,
 )
 from .schema_extraction import extract_weekly_schema
-from .state_inference import infer_state
+from .state_inference import infer_state_with_confidence
 from .types import (
     EncodingFactors,
     EventRecord,
@@ -70,7 +70,7 @@ class BrainMemEngine:
         created_at = utc_now_iso()
         now = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
 
-        state = infer_state(
+        state, state_confidence = infer_state_with_confidence(
             request.text,
             metadata={
                 "time_of_day": request.mode if request.mode in {"morning", "afternoon", "evening", "night"} else None,
@@ -147,6 +147,7 @@ class BrainMemEngine:
                 "encoding_score": decision.score,
                 "encoding_threshold": decision.threshold,
                 "encoding_weighted_factors": decision.weighted_factors,
+                "state_confidence": state_confidence,
                 "strength": 0.55,
             }
             write_markdown(target_path, metadata_payload, record.text)
@@ -218,17 +219,17 @@ class BrainMemEngine:
                 created_at=str(metadata.get("created_at", "")),
                 weights=self.config.recall_weights,
             )
-            prior_score, prior_detail = score_identity_goal_prior(
+            prior_detail = score_identity_goal_prior(
                 identity_dir=self.config.identity_dir,
                 goals_dir=self.config.goals_dir,
-                query_cues=request.cues,
-                candidate_cues=[str(c) for c in metadata.get("cues", [])],
+                cues=request.cues + [str(c) for c in metadata.get("cues", [])],
                 project=request.project,
             )
+            prior_score = float(prior_detail.get("score", 0.0))
             candidate.total_score = round(candidate.total_score + prior_score, 6)
             candidate.score_breakdown["identity_goal_prior"] = round(prior_score, 6)
-            candidate.score_breakdown["identity_evidence_hits"] = round(prior_detail.get("identity_hits", 0.0), 6)
-            candidate.score_breakdown["goal_alignment_hits"] = round(prior_detail.get("goal_hits", 0.0), 6)
+            candidate.score_breakdown["identity_evidence_hits"] = float(len(prior_detail.get("matched_beliefs", [])))
+            candidate.score_breakdown["goal_alignment_hits"] = float(len(prior_detail.get("matched_goals", [])))
             graph_activation = graph_map.get(memory_id)
             if graph_activation:
                 candidate.total_score = round(candidate.total_score + (0.2 * graph_activation.activation_score), 6)
@@ -330,6 +331,9 @@ class BrainMemEngine:
             data[event_id] = {
                 "path": str(event_path),
                 "strength": metadata_payload.get("strength", 0.55),
+                "inhibition_level": 0.0,
+                "last_inhibited_at": "",
+                "last_recalled_at": "",
                 "updated_at": utc_now_iso(),
             }
         self._write_json(index_path, data)
@@ -373,7 +377,15 @@ class BrainMemEngine:
             strength_table=strength_table,
             policy=InhibitionPolicy(),
         )
+        winner_entry = strength_table.setdefault(winner.memory_id, {})
+        winner_strength = float(winner_entry.get("strength", 0.55))
+        winner_entry["strength"] = round(min(1.0, winner_strength + 0.04), 6)
+        winner_entry["inhibition_level"] = max(0.0, float(winner_entry.get("inhibition_level", 0.0)) - 0.03)
+        winner_entry["last_recalled_at"] = utc_now_iso()
+        winner_entry["updated_at"] = utc_now_iso()
         if affected:
+            self._write_json(strength_path, strength_table)
+        elif winner.memory_id in strength_table:
             self._write_json(strength_path, strength_table)
 
     def _mark_recalled_memories_labilized(self, selected: list[RecallMatch], request: RecallRequest) -> None:

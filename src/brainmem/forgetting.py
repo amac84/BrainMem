@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .competition_inhibition import InhibitionPolicy, recover_inhibited_strengths
 from .markdown_io import read_markdown, write_markdown
 
 
@@ -31,6 +32,7 @@ class ForgettingPolicy:
     prune_threshold: float = 0.18
     archive_retention_days: int = 30
     renormalize_target_mean: float = 0.5
+    inhibition_recovery_cap_days: int = 10
 
 
 @dataclass(slots=True)
@@ -55,8 +57,10 @@ def run_forgetting_pass(
     strength_table_path: Path,
     archive_dir: Path,
     policy: ForgettingPolicy | None = None,
+    inhibition_policy: InhibitionPolicy | None = None,
 ) -> ForgettingResult:
     cfg = policy or ForgettingPolicy()
+    inh_cfg = inhibition_policy or InhibitionPolicy()
     strength_table = _read_json(strength_table_path, default={})
 
     decayed = 0
@@ -72,6 +76,18 @@ def run_forgetting_pass(
         strength = float(payload.get("strength", 0.55))
         updated_at = _parse_iso(str(payload.get("updated_at", ""))) or now
         age_days = max(0.0, (now - updated_at).total_seconds() / 86400.0)
+
+        last_inhibited_at = _parse_iso(str(payload.get("last_inhibited_at", "")))
+        if float(payload.get("inhibition_level", 0.0)) > 0 and last_inhibited_at is not None:
+            recover_days = max(0.0, (now - last_inhibited_at).total_seconds() / 86400.0)
+            recover_days = min(float(cfg.inhibition_recovery_cap_days), recover_days)
+            if recover_days > 0:
+                recover_inhibited_strengths(
+                    strength_table={event_id: payload},
+                    elapsed_days=recover_days,
+                    policy=inh_cfg,
+                )
+                strength = float(payload.get("strength", strength))
 
         decayed_strength = strength * (2.718281828 ** (-cfg.decay_lambda_per_day * age_days))
         decayed_strength = round(max(0.0, min(1.0, decayed_strength)), 6)
