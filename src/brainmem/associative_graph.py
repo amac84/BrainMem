@@ -109,24 +109,39 @@ def apply_pattern_separation(
     *,
     overlap_threshold: float = 0.75,
 ) -> list[GraphActivationResult]:
-    """Mark near-duplicate top activations and produce disambiguation hints."""
+    """Mark near-duplicate activations and produce disambiguation hints.
+
+    Compare each contender against all higher-ranked activations, not just the
+    top one. This avoids missing duplicates when final ranking later reshuffles
+    candidates via non-graph signals.
+    """
     if len(activations) < 2:
         return activations
 
     memory_to_cues: dict[str, list[str]] = dict(adjacency.get("memory_to_cues", {}))
-    top_cues = set(memory_to_cues.get(activations[0].memory_id, []))
-    if not top_cues:
-        return activations
 
     for idx in range(1, len(activations)):
         contender = activations[idx]
         contender_cues = set(memory_to_cues.get(contender.memory_id, []))
-        overlap = jaccard(top_cues, contender_cues)
-        contender.overlap_with_top = round(overlap, 6)
-        if overlap >= overlap_threshold:
+        if not contender_cues:
+            continue
+
+        best_overlap = 0.0
+        best_ref_cues: set[str] = set()
+        for prior in activations[:idx]:
+            prior_cues = set(memory_to_cues.get(prior.memory_id, []))
+            if not prior_cues:
+                continue
+            overlap = jaccard(prior_cues, contender_cues)
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_ref_cues = prior_cues
+
+        contender.overlap_with_top = round(best_overlap, 6)
+        if best_overlap >= overlap_threshold:
             contender.disambiguation_required = True
-            contenders_only = sorted(contender_cues - top_cues)[:4]
-            top_only = sorted(top_cues - contender_cues)[:4]
+            contenders_only = sorted(contender_cues - best_ref_cues)[:4]
+            top_only = sorted(best_ref_cues - contender_cues)[:4]
             hint_bits = []
             if top_only:
                 hint_bits.append(f"top-unique: {', '.join(top_only)}")
