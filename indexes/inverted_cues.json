@@ -1,47 +1,93 @@
 {
   "action:review": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "emotion:worried": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "mode:planning": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "person:maya": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "place:unknown": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "project:atlas": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "token:atlas": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "token:before": [
     "/workspace/memory/events/2026/04/07/ev-453295f580.md"
   ],
   "token:budget": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
+  "token:dependency": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "token:finalize": [
     "/workspace/memory/events/2026/04/07/ev-453295f580.md"
   ],
+  "token:flagged": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
   "token:friday": [
     "/workspace/memory/events/2026/04/07/ev-453295f580.md"
   ],
+  "token:handoff": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
   "token:maya": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ],
   "token:need": [
     "/workspace/memory/events/2026/04/07/ev-453295f580.md"
   ],
+  "token:q2": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md"
+  ],
+  "token:q3": [
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
   "token:review": [
     "/workspace/memory/events/2026/04/07/ev-453295f580.md"
   ],
+  "token:reviewed": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
+  "token:vendor": [
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
+  ],
   "tool:laptop": [
-    "/workspace/memory/events/2026/04/07/ev-453295f580.md"
+    "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+    "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+    "/workspace/memory/events/2026/04/07/ev-d31343c148.md"
   ]
 }

@@ -7,6 +7,13 @@ from typing import Any
 from uuid import uuid4
 
 from .config import BrainMemConfig, DEFAULT_ENCODING_THRESHOLD
+from .associative_graph import activate_from_cues, apply_pattern_separation, build_hig_adjacency
+from .competition_inhibition import (
+    InhibitionPolicy,
+    apply_competitor_inhibition,
+    build_competition_sets,
+    write_competition_sets,
+)
 from .cue_extraction import cues_for_ingest
 from .encoding_gate import score_event_for_encoding
 from .markdown_io import read_markdown, write_markdown
@@ -140,23 +147,48 @@ class BrainMemEngine:
 
     def recall(self, request: RecallRequest) -> list[RecallMatch]:
         matches: list[RecallMatch] = []
+        adjacency = self._load_hig_adjacency()
+        graph_results = apply_pattern_separation(
+            activate_from_cues(query_cues=request.cues, adjacency=adjacency, top_k=max(request.top_k * 3, 10)),
+            adjacency,
+        )
+        graph_map = {result.memory_id: result for result in graph_results}
+
         for path in sorted(self.config.events_dir.glob("**/*.md")):
             metadata, body = read_markdown(path)
             if metadata.get("type") != "event":
                 continue
+            memory_id = str(metadata.get("event_id", path.stem))
             candidate = score_candidate(
                 request,
-                memory_id=str(metadata.get("event_id", path.stem)),
+                memory_id=memory_id,
                 path=path,
                 cues=[str(c) for c in metadata.get("cues", [])],
                 state={k: str(v) for k, v in dict(metadata.get("state", {})).items()},
                 anchor=str(metadata.get("source_anchor", "")),
                 excerpt=body[:280].strip(),
+                created_at=str(metadata.get("created_at", "")),
                 weights=self.config.recall_weights,
             )
+            graph_activation = graph_map.get(memory_id)
+            if graph_activation:
+                candidate.total_score = round(candidate.total_score + (0.2 * graph_activation.activation_score), 6)
+                candidate.score_breakdown["graph_activation"] = round(graph_activation.activation_score, 6)
+                candidate.score_breakdown["graph_supporting_cues"] = len(graph_activation.matched_cues)
+                candidate.score_breakdown["pattern_overlap_with_top"] = round(
+                    graph_activation.overlap_with_top,
+                    6,
+                )
+                if graph_activation.disambiguation_required:
+                    candidate.score_breakdown["pattern_separation_required"] = 1.0
+                    candidate.score_breakdown["pattern_separation_hint"] = graph_activation.pattern_separation_hint
+            else:
+                candidate.score_breakdown["graph_activation"] = 0.0
             matches.append(candidate)
         matches.sort(key=lambda item: item.total_score, reverse=True)
-        return matches[: request.top_k]
+        selected = matches[: request.top_k]
+        self._update_competition_inhibition(request, selected)
+        return selected
 
     def _stream_file_path(self, day: date) -> Path:
         return self.config.stream_dir / f"{day.isoformat()}.md"
@@ -202,6 +234,7 @@ class BrainMemEngine:
         self._update_inverted_cues(event_path, metadata_payload)
         self._update_state_buckets(event_path, metadata_payload)
         self._update_strength_table(event_path, metadata_payload)
+        self._update_associative_indexes()
 
     def _update_inverted_cues(self, event_path: Path, metadata_payload: dict[str, Any]) -> None:
         index_path = self.config.indexes_dir / "inverted_cues.json"
@@ -238,6 +271,48 @@ class BrainMemEngine:
                 "updated_at": utc_now_iso(),
             }
         self._write_json(index_path, data)
+
+    def _update_associative_indexes(self) -> None:
+        adjacency = build_hig_adjacency(self.config.events_dir)
+        self._write_json(self.config.indexes_dir / "hig_adjacency.json", adjacency)
+
+        cue_to_events = {
+            cue: [
+                str(memory_id)
+                for memory_id in event_ids
+            ]
+            for cue, event_ids in dict(adjacency.get("cue_to_memories", {})).items()
+        }
+        competition_sets = build_competition_sets(cue_to_events)
+        write_competition_sets(self.config.indexes_dir / "competition_sets.json", competition_sets)
+
+    def _load_hig_adjacency(self) -> dict[str, Any]:
+        path = self.config.indexes_dir / "hig_adjacency.json"
+        if path.exists():
+            return self._read_json(path, {})
+        adjacency = build_hig_adjacency(self.config.events_dir)
+        self._write_json(path, adjacency)
+        return adjacency
+
+    def _update_competition_inhibition(self, request: RecallRequest, selected: list[RecallMatch]) -> None:
+        if not selected or not request.cues:
+            return
+        strength_path = self.config.indexes_dir / "strength_table.json"
+        strength_table = self._read_json(strength_path, {})
+        competition_path = self.config.indexes_dir / "competition_sets.json"
+        competition_sets = self._read_json(competition_path, {})
+
+        winner = selected[0]
+        cue = request.cues[0]
+        affected = apply_competitor_inhibition(
+            winner_event_id=winner.memory_id,
+            cue=cue,
+            competition_sets=competition_sets,
+            strength_table=strength_table,
+            policy=InhibitionPolicy(),
+        )
+        if affected:
+            self._write_json(strength_path, strength_table)
 
     def _read_json(self, path: Path, default: Any) -> Any:
         if not path.exists():

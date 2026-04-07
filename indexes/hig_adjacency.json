@@ -1,0 +1,241 @@
+{
+  "cue_to_memories": {
+    "action:review": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "emotion:worried": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "mode:planning": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "person:maya": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "place:unknown": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "project:atlas": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:atlas": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:before": [
+      "ev-453295f580"
+    ],
+    "token:budget": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:dependency": [
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:finalize": [
+      "ev-453295f580"
+    ],
+    "token:flagged": [
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:friday": [
+      "ev-453295f580"
+    ],
+    "token:handoff": [
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:maya": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:need": [
+      "ev-453295f580"
+    ],
+    "token:q2": [
+      "ev-ca6d9c1325"
+    ],
+    "token:q3": [
+      "ev-d31343c148"
+    ],
+    "token:review": [
+      "ev-453295f580"
+    ],
+    "token:reviewed": [
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "token:vendor": [
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ],
+    "tool:laptop": [
+      "ev-453295f580",
+      "ev-ca6d9c1325",
+      "ev-d31343c148"
+    ]
+  },
+  "memories": {
+    "ev-453295f580": {
+      "cues": [
+        "action:review",
+        "emotion:worried",
+        "mode:planning",
+        "person:maya",
+        "place:unknown",
+        "project:atlas",
+        "token:atlas",
+        "token:before",
+        "token:budget",
+        "token:finalize",
+        "token:friday",
+        "token:maya",
+        "token:need",
+        "token:review",
+        "tool:laptop"
+      ],
+      "path": "/workspace/memory/events/2026/04/07/ev-453295f580.md",
+      "project": "Atlas",
+      "state": {
+        "device_context": "laptop",
+        "location": "unknown",
+        "physio_proxy": "worried",
+        "processing_mode": "planning",
+        "social_context": "social",
+        "time_of_day": "morning"
+      }
+    },
+    "ev-ca6d9c1325": {
+      "cues": [
+        "action:review",
+        "emotion:worried",
+        "mode:planning",
+        "person:maya",
+        "place:unknown",
+        "project:atlas",
+        "token:atlas",
+        "token:budget",
+        "token:dependency",
+        "token:flagged",
+        "token:handoff",
+        "token:maya",
+        "token:q2",
+        "token:reviewed",
+        "token:vendor",
+        "tool:laptop"
+      ],
+      "path": "/workspace/memory/events/2026/04/07/ev-ca6d9c1325.md",
+      "project": "Atlas",
+      "state": {
+        "device_context": "laptop",
+        "location": "unknown",
+        "physio_proxy": "worried",
+        "processing_mode": "planning",
+        "social_context": "social",
+        "time_of_day": "morning"
+      }
+    },
+    "ev-d31343c148": {
+      "cues": [
+        "action:review",
+        "emotion:worried",
+        "mode:planning",
+        "person:maya",
+        "place:unknown",
+        "project:atlas",
+        "token:atlas",
+        "token:budget",
+        "token:dependency",
+        "token:flagged",
+        "token:handoff",
+        "token:maya",
+        "token:q3",
+        "token:reviewed",
+        "token:vendor",
+        "tool:laptop"
+      ],
+      "path": "/workspace/memory/events/2026/04/07/ev-d31343c148.md",
+      "project": "Atlas",
+      "state": {
+        "device_context": "laptop",
+        "location": "unknown",
+        "physio_proxy": "worried",
+        "processing_mode": "planning",
+        "social_context": "social",
+        "time_of_day": "morning"
+      }
+    }
+  },
+  "memory_to_cues": {
+    "ev-453295f580": [
+      "action:review",
+      "emotion:worried",
+      "mode:planning",
+      "person:maya",
+      "place:unknown",
+      "project:atlas",
+      "token:atlas",
+      "token:before",
+      "token:budget",
+      "token:finalize",
+      "token:friday",
+      "token:maya",
+      "token:need",
+      "token:review",
+      "tool:laptop"
+    ],
+    "ev-ca6d9c1325": [
+      "action:review",
+      "emotion:worried",
+      "mode:planning",
+      "person:maya",
+      "place:unknown",
+      "project:atlas",
+      "token:atlas",
+      "token:budget",
+      "token:dependency",
+      "token:flagged",
+      "token:handoff",
+      "token:maya",
+      "token:q2",
+      "token:reviewed",
+      "token:vendor",
+      "tool:laptop"
+    ],
+    "ev-d31343c148": [
+      "action:review",
+      "emotion:worried",
+      "mode:planning",
+      "person:maya",
+      "place:unknown",
+      "project:atlas",
+      "token:atlas",
+      "token:budget",
+      "token:dependency",
+      "token:flagged",
+      "token:handoff",
+      "token:maya",
+      "token:q3",
+      "token:reviewed",
+      "token:vendor",
+      "tool:laptop"
+    ]
+  }
+}
