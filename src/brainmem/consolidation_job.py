@@ -8,6 +8,7 @@ from typing import Any
 
 from .config import BrainMemConfig
 from .event_segmentation import segment_stream_records
+from .forgetting import ForgettingPolicy, run_forgetting_pass
 from .markdown_io import read_markdown, write_markdown
 
 
@@ -45,9 +46,22 @@ def run_daily_consolidation(
     config: BrainMemConfig,
     target_date: date,
     boundary_threshold: float = 0.45,
+    run_forgetting: bool = True,
 ) -> dict[str, Any]:
     job = ConsolidationJob(root=config.root_dir)
-    return job.run_daily(day=target_date, boundary_threshold=boundary_threshold)
+    result = job.run_daily(day=target_date, boundary_threshold=boundary_threshold)
+    if run_forgetting:
+        forgetting_result = run_forgetting_pass(
+            events_dir=config.events_dir,
+            strength_table_path=config.indexes_dir / "strength_table.json",
+            archive_dir=config.archive_dir,
+            policy=ForgettingPolicy(),
+        )
+        forgetting_summary = forgetting_result.as_dict()
+    else:
+        forgetting_summary = {"decayed": 0, "archived": 0, "retained": 0, "renormalized": 0}
+    result["forgetting"] = forgetting_summary
+    return result
 
 
 def _parse_stream_events(body: str) -> list[dict[str, Any]]:

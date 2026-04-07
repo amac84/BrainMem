@@ -1,4 +1,15 @@
 {
+  "ev-2229abd465": {
+    "claims": {
+      "Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:call,token:handoff,token:vendor;people=Maya;project=Atlas; excerpt=Need to call Maya to close the Atlas vendor handoff loop tomorrow": {
+        "confidence": 0.52,
+        "evidence": [
+          "2026-04-07.md#event_id=ev-2229abd465"
+        ],
+        "updated_at": "2026-04-07T10:19:31+00:00"
+      }
+    }
+  },
   "ev-ca6d9c1325": {
     "claims": {
       "Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:budget,token:handoff,token:vendor;people=Maya;project=Atlas; excerpt=Reviewed Atlas budget with Maya and flagged vendor dependency for Q2 handoff": {
@@ -7,6 +18,13 @@
           "2026-04-07.md#event_id=ev-ca6d9c1325"
         ],
         "updated_at": "2026-04-07T09:58:04+00:00"
+      },
+      "Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:call,token:handoff,token:vendor;people=Maya;project=Atlas; excerpt=Reviewed Atlas budget with Maya and flagged vendor dependency for Q2 handoff": {
+        "confidence": 0.52,
+        "evidence": [
+          "2026-04-07.md#event_id=ev-ca6d9c1325"
+        ],
+        "updated_at": "2026-04-07T10:19:31+00:00"
       }
     }
   },
