@@ -76,6 +76,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.45,
         help="Boundary score threshold for splitting stream events.",
     )
+    consolidate.add_argument(
+        "--apply-reconsolidation",
+        action="store_true",
+        help="After consolidation, commit queued reconsolidation patches.",
+    )
 
     return parser
 
@@ -182,10 +187,14 @@ def _handle_consolidate(args: argparse.Namespace, engine: BrainMemEngine) -> dic
         target_date=target_date,
         boundary_threshold=args.boundary_threshold,
     )
+    recon = {"decisions": [], "committed": 0, "conflicts": 0, "deferred": 0, "rejected": 0}
+    if args.apply_reconsolidation:
+        recon = engine.run_reconsolidation_commit()
     return {
         "status": "ok",
         "operation": "consolidate",
         "date": target_date.isoformat(),
+        "reconsolidation": recon,
         **result,
     }
 

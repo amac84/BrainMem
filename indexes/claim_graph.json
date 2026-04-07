@@ -1,0 +1,24 @@
+{
+  "ev-ca6d9c1325": {
+    "claims": {
+      "Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:budget,token:handoff,token:vendor;people=Maya;project=Atlas; excerpt=Reviewed Atlas budget with Maya and flagged vendor dependency for Q2 handoff": {
+        "confidence": 0.52,
+        "evidence": [
+          "2026-04-07.md#event_id=ev-ca6d9c1325"
+        ],
+        "updated_at": "2026-04-07T09:58:04+00:00"
+      }
+    }
+  },
+  "ev-d31343c148": {
+    "claims": {
+      "Recall trace: recall_cues=emotion:worried,person:maya,project:atlas,token:budget,token:handoff,token:vendor;people=Maya;project=Atlas; excerpt=Reviewed Atlas budget with Maya and flagged vendor dependency for Q3 handoff": {
+        "confidence": 0.52,
+        "evidence": [
+          "2026-04-07.md#event_id=ev-d31343c148"
+        ],
+        "updated_at": "2026-04-07T09:58:04+00:00"
+      }
+    }
+  }
+}

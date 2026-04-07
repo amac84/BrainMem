@@ -18,6 +18,11 @@ from .cue_extraction import cues_for_ingest
 from .encoding_gate import score_event_for_encoding
 from .markdown_io import read_markdown, write_markdown
 from .recall_scoring import score_candidate
+from .reconsolidation import (
+    commit_reconsolidation_queue,
+    labilize_memory,
+    queue_patch,
+)
 from .state_inference import infer_state
 from .types import (
     EncodingFactors,
@@ -188,6 +193,7 @@ class BrainMemEngine:
         matches.sort(key=lambda item: item.total_score, reverse=True)
         selected = matches[: request.top_k]
         self._update_competition_inhibition(request, selected)
+        self._mark_recalled_memories_labilized(selected, request)
         return selected
 
     def _stream_file_path(self, day: date) -> Path:
@@ -313,6 +319,31 @@ class BrainMemEngine:
         )
         if affected:
             self._write_json(strength_path, strength_table)
+
+    def _mark_recalled_memories_labilized(self, selected: list[RecallMatch], request: RecallRequest) -> None:
+        evidence_note = (
+            f"recall_cues={','.join(request.cues[:8])};"
+            f"people={','.join(request.people[:4])};project={request.project}"
+        )
+        for match in selected:
+            labilize_memory(match.path)
+            claim = f"Recall trace: {evidence_note}; excerpt={match.excerpt[:100]}"
+            queue_patch(
+                queue_dir=self.config.reconsolidation_queue_dir,
+                memory_path=match.path,
+                memory_id=match.memory_id,
+                claim=claim,
+                evidence_anchor=match.anchor or f"auto:{match.memory_id}",
+                confidence_delta=0.02,
+                expected_project=request.project.lower(),
+            )
+
+    def run_reconsolidation_commit(self) -> dict[str, Any]:
+        result = commit_reconsolidation_queue(
+            queue_dir=self.config.reconsolidation_queue_dir,
+            claim_graph_path=self.config.indexes_dir / "claim_graph.json",
+        )
+        return result
 
     def _read_json(self, path: Path, default: Any) -> Any:
         if not path.exists():
